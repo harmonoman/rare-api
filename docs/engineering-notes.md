@@ -9,6 +9,90 @@ Entries are dated and ordered newest-first.
 
 ---
 
+## 2026-06-29 — Full Stack Startup Validated
+
+### Context
+
+First successful full-stack startup of the Rare project after environment
+stabilization. All three layers confirmed working end-to-end.
+
+### Startup Sequence Established
+
+```
+1. cd rare-api && docker compose up -d db
+2. .venv/bin/python manage.py runserver 8088  (new terminal, rare-api)
+3. cd rare-client && npm start                (new terminal, rare-client)
+```
+
+Shutdown sequence (reverse dependency order):
+
+```
+1. Ctrl+C in React terminal (or close it)
+2. kill <pid> or Ctrl+C in Django terminal
+3. cd rare-api && docker compose stop
+```
+
+### Key Discovery — Fixture Not Loaded
+
+Login failed with "Username or password not valid" because `loaddata` had
+never been run. `migrate` creates table structure (DDL) but does not
+populate data. `loaddata` is a separate step that inserts seed data (DML).
+
+Resolution:
+
+```bash
+.venv/bin/python manage.py loaddata rareapi/fixtures/initial_data.json
+```
+
+Installed 314 objects: users, posts, categories, tags, comments, reactions,
+subscriptions.
+
+### When to Run loaddata
+
+Only on a fresh empty database — after `docker compose down -v` destroys
+the volume. Normal restarts (`docker compose stop` / `docker compose up`)
+preserve the Docker volume and all data. Do not run loaddata on a database
+that already has data — it creates duplicates.
+
+### Port Conflict — crypto_metabase on 3000
+
+`crypto_metabase` Docker container from an unrelated project was occupying
+port 3000. React could not start. Resolution: `docker stop crypto_metabase`.
+This freed port 3000 without any code changes.
+
+### Test Credentials
+
+All test accounts use password: `password`
+
+Admins: `admin_sarah`, `admin_marcus`
+
+Full credential list visible in rare-client git history:
+`git show 8df6fea -- README.md`
+
+### Authentication Confirmed
+
+Token stored in localStorage after login:
+- Key: `auth_token`
+- Key: `current_user_id`
+
+Token persists across restarts. User remains logged in until they
+explicitly log out or localStorage is cleared.
+
+### Command Understanding — Established Mental Models
+
+| Command | What it does |
+|---|---|
+| `docker compose up -d db` | Starts PostgreSQL container in background (detached) |
+| `docker compose stop` | Stops container, preserves volume and data |
+| `docker compose down -v` | Destroys container AND volume — data is gone |
+| `python manage.py migrate` | DDL — creates/alters database tables from migration files |
+| `python manage.py loaddata` | DML — inserts seed data into existing tables |
+| `python manage.py runserver 8088` | Starts Django dev server on port 8088 |
+| `npm install` | Downloads JS dependencies into node_modules/ |
+| `npm start` | Starts React dev server on localhost:3000 |
+
+---
+
 ## 2026-06-22 — Dependency Environment Recovery
 
 ### Problem
